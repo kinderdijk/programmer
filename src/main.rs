@@ -5,31 +5,44 @@ use std::path::Path;
 use std::ffi::OsStr;
 use std::fs::read;
 use std::io::Result;
+use env_logger::Builder;
+use log::{LevelFilter, trace, debug, info};
+
+
+////////////////////////////////////////////////////////////////////
+/// 
+/// Might need to add some logic to only send 64 bytes at a time
+/// as that is the most the arduino can buffer at a time.
+/// 
+/// Look into using something like Clap for the command 
+/// line arguments. Can be configured in yml config file.
+/// 
+/////////////////////////////////////////////////////////////////////
+
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+    Builder::new().filter_level(LevelFilter::Debug).init();
 
-    let filename = &args[1];
-    println!("{:?}", filename);
+    let binary_filename = &args[1];
+    debug!("Binary filename: {:?}", binary_filename);
 
-    let file_contents: Vec<u8> = read_file_contents(filename).expect("Unable to read file contents.");
-    println!("Contents: {:?}", file_contents);
+    let file_contents: Vec<u8> = read_file_contents(binary_filename).expect("Unable to read file contents.");
+    trace!("Contents: {:?}", file_contents);
     let file_contents: &[u8] = &file_contents;
-
-    // let ports = serialport::available_ports().expect("No ports were found.");
 
     let mut usb_port_name: String = String::new();
     let ports = serialport::available_ports().expect("No ports found!");
     for p in ports {
         usb_port_name = match get_port_name(p) {
             Some(name) => name,
-            None => panic!("No usb ports found!  Aborting!")
+            None => String::from("None")
         }
     }
-    
-    // for p in ports {
-    //     println!("Port: {:?}", p.port_name);
-    // }
+    if usb_port_name == "None" {
+        panic!("No usb ports found!");
+    }
+    info!("Found port. Attempting to connect. port={:?}", usb_port_name);
 
     let mut active_port = serialport::new(usb_port_name, 115_200)
             .timeout(Duration::from_millis(10))
