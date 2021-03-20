@@ -5,6 +5,7 @@ use std::path::Path;
 use std::ffi::OsStr;
 use std::fs::read;
 use std::io::Result;
+use clap::{Arg, App, crate_version};
 use env_logger::Builder;
 use log::{LevelFilter, trace, debug, info};
 
@@ -21,10 +22,27 @@ use log::{LevelFilter, trace, debug, info};
 
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    Builder::new().filter_level(LevelFilter::Debug).init();
+    let arg_matches = App::new("Custom 8-bit Computer Assembler")
+                            .version(crate_version!())
+                            .author("Jon Pendlebury")
+                            .about("Assembles a custom script to be run on a custom 8-bit computer")
+                            .arg(Arg::with_name("OBJECT_FILE")
+                                    .help("The name of the object file. Must be 'myobj' extension")
+                                    .required(true))
+                            .arg(Arg::with_name("v")
+                                    .short("v")
+                                    .multiple(true)
+                                    .help("Sets the verbosity of the output."))
+                            .get_matches();
 
-    let binary_filename = &args[1];
+    let binary_filename = arg_matches.value_of("OBJECT_FILE").unwrap();
+    let verbosity = match arg_matches.occurrences_of("v") {
+        0 => LevelFilter::Info,
+        1 => LevelFilter::Debug,
+        2 | _ => LevelFilter::Trace,
+    };
+    Builder::new().filter_level(verbosity).init();
+
     debug!("Binary filename: {:?}", binary_filename);
 
     let file_contents: Vec<u8> = read_file_contents(binary_filename).expect("Unable to read file contents.");
