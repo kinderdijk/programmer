@@ -1,10 +1,7 @@
 use serialport::{SerialPortInfo, SerialPortType};
-use std::env;
-use std::time::Duration;
+use std::{thread, fs, io, time};
 use std::path::Path;
 use std::ffi::OsStr;
-use std::fs::read;
-use std::io::Result;
 use clap::{Arg, App, crate_version};
 use env_logger::Builder;
 use log::{LevelFilter, trace, debug, info};
@@ -63,8 +60,12 @@ fn main() {
     info!("Found port. Attempting to connect. port={:?}", usb_port_name);
 
     let mut active_port = serialport::new(usb_port_name, 115_200)
-            .timeout(Duration::from_millis(10))
+            .timeout(time::Duration::from_millis(10))
             .open().expect("Failed to open port.");
+
+    info!("Connected to port. Waiting for 4 seconds for arduino restart.");
+    let arduino_time = time::Duration::from_secs(4);
+    thread::sleep(arduino_time);
 
     active_port.write(file_contents).expect("Problem writing to port.");
 }
@@ -90,11 +91,11 @@ fn valid_file(filename: &str) -> bool {
     return valid;
 }
 
-fn read_file_contents(filename: &str) -> Result<Vec<u8>> {
+fn read_file_contents(filename: &str) -> io::Result<Vec<u8>> {
     if !valid_file(filename) {
         panic!("File is not valid. filename={}", filename);
     }
 
-    let file_contents = read(filename).expect("Problem reading the file.");
+    let file_contents = fs::read(filename).expect("Problem reading the file.");
     Ok(file_contents)
 }
